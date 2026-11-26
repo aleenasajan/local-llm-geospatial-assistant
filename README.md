@@ -28,6 +28,7 @@ The proposed system integrates five main components:
 4. **QGIS:** Spatial data access, map navigation, and supported geospatial operations.
 5. **Python:** Orchestration of LLM interactions, retrieval, and tool execution.
 
+![System Architecture](architecture.png)
 ### Workflow
 
 User Query → Python AI Client → RAG + LLM → MCP → QGIS → Result
