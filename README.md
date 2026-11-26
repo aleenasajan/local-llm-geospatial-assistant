@@ -94,6 +94,8 @@ This project was conducted as part of Lab Rotation 2 in the MSc Remote Sensing a
 
 ## Repository Status
 
-This repository documents the research methodology, system architecture, and experimental findings.
+This repository contains the completed implementation and documentation of my Lab Rotation 2 research project at Karlsruhe Institute of Technology (KIT).
 
-Implementation files and additional documentation may be added separately where sharing is permitted.
+The project includes the Python-based LLM client, MCP server, QGIS plugin, RAG retriever, system architecture, and experimental results.
+
+The research was completed and presented as part of the MSc Remote Sensing and Geoinformatics programme.
