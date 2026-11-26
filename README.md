@@ -66,6 +66,14 @@ Executed `get_layers` followed by `zoom_to_layer`.
 **QGIS Result:**
 Successfully navigated to the hospitals layer containing 212 hospital features.
 
+### QGIS Demonstration
+
+The QGIS project used for experimental evaluation
+contains OpenStreetMap-derived spatial layers,
+including hospitals, schools, roads, and land use.
+
+![QGIS Demonstration](qgis_demo.png)
+
 ## Limitations
 
 - Evaluation focused on selected GIS operations.
