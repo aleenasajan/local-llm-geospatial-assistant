@@ -1,0 +1,811 @@
+QQGIS2OllamaMCP PROJECT KNOWLEDGE BASE
+
+
+SECTION 1: PROJECT OVERVIEW
+
+The QGIS2OllamaMCP project connects a user to QGIS through a locally running language model and the Model Context Protocol (MCP).
+
+The main goal of the project is to allow a user to interact with QGIS using natural-language requests.
+
+The core pipeline is:
+
+User -> RAG retrieval -> Gemma 4 reasoning -> MCP tool selection -> QGIS execution -> final response.
+
+Gemma 4 is used as the main language model.
+
+Gemma 4 interprets the user request, reasons about the required task, decides whether an MCP tool is needed, selects tools, and generates the final response.
+
+The project uses Ollama to run Gemma 4 locally.
+
+RAG is used to retrieve relevant project-specific knowledge before Gemma 4 reasons about the request.
+
+MCP is used to provide live interaction with QGIS.
+
+QGIS is responsible for executing GIS operations on the currently loaded project and datasets.
+
+
+SECTION 2: ROLE OF RAG
+
+RAG stands for Retrieval-Augmented Generation.
+
+RAG retrieves relevant knowledge from the project knowledge base before the language model generates a response.
+
+RAG is used to provide supporting context to Gemma 4.
+
+RAG does not execute GIS operations.
+
+RAG does not replace MCP.
+
+RAG is used for relatively stable knowledge such as:
+- project architecture
+- GIS concepts
+- QGIS concepts
+- descriptions of MCP tools
+- descriptions of datasets
+- GIS workflows
+- explanations of spatial operations
+
+Live information about the current QGIS project should normally be retrieved through MCP rather than stored permanently in RAG.
+
+For example, the current number of features in a layer may change and should therefore be obtained from QGIS through MCP when needed.
+
+
+SECTION 3: EMBEDDINGS AND RETRIEVAL
+
+The project uses the nomic-embed-text model to generate embeddings.
+
+An embedding is a numerical representation of the semantic meaning of text.
+
+Knowledge-base chunks are converted into embeddings.
+
+The user question is also converted into an embedding.
+
+Cosine similarity is used to compare the question embedding with the knowledge-chunk embeddings.
+
+A higher cosine similarity score indicates that a knowledge chunk is more semantically related to the user question.
+
+The similarity score is not a percentage of correctness.
+
+The current RAG implementation retrieves the top three most relevant knowledge chunks.
+
+The retrieved chunks are combined and passed to Gemma 4 as additional context.
+
+
+SECTION 4: ROLE OF MCP
+
+MCP stands for Model Context Protocol.
+
+MCP provides the interface through which Gemma 4 can interact with QGIS tools.
+
+MCP allows available tools to be discovered by the client.
+
+Gemma 4 can decide which MCP tool or sequence of tools is required to perform a user request.
+
+MCP is responsible for live interaction with QGIS.
+
+Examples of live information obtained through MCP include:
+- currently loaded layers
+- current layer IDs
+- current feature counts
+- current project information
+- feature information
+- tool execution results
+
+MCP also enables QGIS actions such as:
+- zooming to a layer
+- changing layer colour
+- loading layers
+- removing layers
+- saving projects
+- executing QGIS processing algorithms
+
+
+SECTION 5: AVAILABLE MCP TOOLS
+
+The MCP server provides multiple QGIS tools.
+
+ping:
+Checks whether the MCP server connection is working.
+
+get_qgis_info:
+Retrieves information about the QGIS environment.
+
+load_project:
+Loads a QGIS project from a specified path.
+
+create_new_project:
+Creates a new QGIS project and saves it.
+
+get_project_info:
+Retrieves information about the currently open QGIS project.
+
+add_vector_layer:
+Adds a vector dataset to the current QGIS project.
+
+add_raster_layer:
+Adds a raster dataset to the current QGIS project.
+
+get_layers:
+Retrieves information about layers currently available in QGIS.
+
+For vector layers, the returned layer information can include:
+- layer ID
+- layer name
+- visibility
+- feature count
+- geometry type
+
+For raster layers, the returned information can include raster properties such as width and height.
+
+remove_layer:
+Removes a layer from the current project using its layer ID.
+
+zoom_to_layer:
+Zooms the QGIS map canvas to the complete extent of a specified layer.
+
+If a layer contains features distributed over a large geographic area, zoom_to_layer displays the combined extent of the whole layer rather than zooming to one individual feature.
+
+set_layer_color:
+Changes the display colour of a vector layer.
+
+get_layer_features:
+Retrieves feature information from a vector layer.
+
+A limit can be used to restrict the number of returned features.
+
+execute_processing:
+Executes a QGIS processing algorithm using specified parameters.
+
+save_project:
+Saves the current QGIS project.
+
+render_map:
+Renders the current map view to an image.
+
+execute_code:
+Executes PyQGIS code through the QGIS integration.
+
+
+SECTION 6: MULTI-STEP TOOL USE
+
+Some natural-language requests require more than one MCP tool.
+
+For example, the user may say:
+
+"Zoom to the hospitals layer."
+
+The user provides a layer name, but the zoom_to_layer tool requires a layer ID.
+
+A suitable workflow is:
+
+1. Call get_layers.
+2. Find the layer whose name matches hospitals.
+3. Extract the current QGIS layer ID.
+4. Call zoom_to_layer using that layer ID.
+5. Check the tool result.
+6. Only report success if QGIS confirms successful execution.
+
+This is an example of multi-step MCP tool calling.
+
+The same principle can be applied to other tools that require a layer ID.
+
+
+SECTION 7: GIS DATA FUNDAMENTALS
+
+GIS data can broadly be represented using vector and raster data models.
+
+Vector data represents geographic features using discrete geometries.
+
+Common vector geometry types include:
+- point
+- line
+- polygon
+
+Points can represent discrete locations.
+
+Lines can represent linear features such as roads, railways, or waterways.
+
+Polygons can represent areas such as buildings, land-use areas, administrative areas, or facility footprints.
+
+Raster data represents geographic information using a grid of cells or pixels.
+
+Raster datasets are commonly used for imagery, elevation surfaces, continuous environmental variables, and map tiles.
+
+A GIS layer is a dataset displayed or managed within a GIS project.
+
+A QGIS project can contain multiple vector and raster layers.
+
+
+SECTION 8: ATTRIBUTES AND FEATURES
+
+A vector layer contains geographic features.
+
+Each feature consists of:
+- geometry
+- attribute information
+
+The geometry describes the spatial shape and location of the feature.
+
+The attribute table stores non-spatial information associated with each feature.
+
+Attribute fields are the columns of the attribute table.
+
+Attribute values describe individual features.
+
+Attribute information can be used for:
+- filtering features
+- classification
+- selection
+- analysis
+- map styling
+
+
+SECTION 9: COORDINATE REFERENCE SYSTEMS
+
+A Coordinate Reference System, or CRS, defines how spatial coordinates relate to positions on the Earth.
+
+GIS layers may use different coordinate reference systems.
+
+The CRS is important when performing spatial analysis.
+
+Distance and area calculations depend on the coordinate reference system.
+
+Before performing operations involving a distance in metres, the coordinate system must be appropriate for metric distance calculations.
+
+If layers use incompatible coordinate systems, coordinate transformation may be required before analysis.
+
+
+SECTION 10: COMMON GIS OPERATIONS
+
+A buffer creates an area around a geographic feature at a specified distance.
+
+Buffers are commonly used for proximity analysis.
+
+Example:
+A 500-metre buffer around hospitals can represent areas located within 500 metres of hospital features.
+
+Clip extracts portions of one dataset using the spatial boundary of another dataset.
+
+Intersection identifies areas or features that spatially overlap between datasets.
+
+Spatial selection identifies features based on their geographic relationship to other features.
+
+Examples include:
+- intersects
+- contains
+- within
+- touches
+- overlaps
+
+Proximity analysis examines spatial relationships based on distance.
+
+Attribute queries select features using their non-spatial properties.
+
+Spatial queries select features using geographic relationships.
+
+
+SECTION 11: GIS WORKFLOW REASONING
+
+Complex GIS requests may require several operations.
+
+For example:
+
+"Identify residential areas within 500 metres of hospitals."
+
+A possible GIS reasoning workflow is:
+
+1. Identify the hospitals layer.
+2. Identify the residential layer.
+3. Check relevant coordinate reference systems.
+4. Create a 500-metre buffer around hospital features.
+5. Compare the hospital buffer with residential features.
+6. Identify residential features that intersect the hospital buffer.
+7. Return or display the analysis result.
+
+The exact execution depends on the tools and QGIS processing algorithms available through MCP.
+
+RAG provides the conceptual knowledge needed to understand the workflow.
+
+MCP provides access to QGIS tools needed to execute supported parts of the workflow.
+
+
+SECTION 12: PROJECT DATASETS
+
+The QGIS project can contain multiple thematic datasets.
+
+Examples observed in the current project include:
+- buildings
+- hospitals
+- schools
+- university
+- highways_Karlsruhe
+- railways_karlsruhe
+- Waterways
+- residential
+- commercial
+- industrial
+- farmland
+
+The hospitals layer represents hospital-related geographic features.
+
+The schools layer represents school-related geographic features.
+
+The university layer represents university-related geographic features.
+
+The highways_Karlsruhe layer represents road or highway features.
+
+The railways_karlsruhe layer represents railway features.
+
+The Waterways layer represents waterway features.
+
+The residential layer represents residential land-use features.
+
+The commercial layer represents commercial land-use features.
+
+The farmland layer represents farmland-related geographic areas.
+
+The buildings layer represents building features.
+
+The exact current layer IDs and feature counts should be obtained from QGIS using MCP because they can change between projects or sessions.
+
+
+SECTION 13: COMBINING DATASETS
+
+GIS analysis frequently combines information from multiple layers.
+
+For example:
+
+Hospitals + residential areas:
+Can support proximity or accessibility analysis.
+
+Hospitals + highways:
+Can support analysis of transport accessibility to healthcare facilities.
+
+Schools + residential areas:
+Can support analysis of school accessibility.
+
+Buildings + land-use layers:
+Can support analysis of the relationship between structures and surrounding land use.
+
+Waterways + buildings:
+Can support spatial analysis involving buildings located near water features.
+
+The appropriate GIS operation depends on the user question and the geometry and coordinate systems of the layers involved.
+
+
+SECTION 14: LIVE QGIS INFORMATION VS STORED KNOWLEDGE
+
+RAG and MCP should be used for different types of information.
+
+RAG should contain relatively stable knowledge such as:
+- GIS concepts
+- dataset descriptions
+- project architecture
+- tool descriptions
+- analysis workflows
+
+MCP should be used for dynamic QGIS state such as:
+- currently loaded layers
+- current layer IDs
+- current feature counts
+- layer visibility
+- current project information
+- results of processing operations
+
+For example:
+
+Question:
+"How many hospitals are loaded?"
+
+The answer should be obtained from live QGIS information through MCP.
+
+Question:
+"What type of analysis can be performed with hospitals and residential areas?"
+
+RAG can provide conceptual knowledge about proximity analysis, buffering, and spatial relationships.
+
+
+SECTION 15: ERROR HANDLING AND RELIABILITY
+
+The system should not claim that a QGIS operation succeeded unless the MCP tool result confirms success.
+
+If a user supplies a layer name but the required tool expects a layer ID, the system should first retrieve current layer information.
+
+If a requested layer cannot be found, the system should report that the layer was not found rather than inventing a layer ID.
+
+If a QGIS processing operation fails, the tool error should be returned to the language model so that the failure can be explained.
+
+If retrieved RAG context is not relevant to the user question, it should not be treated as authoritative evidence for a live QGIS state.
+
+RAG retrieval supports reasoning, while actual QGIS state and execution results should be verified using MCP when necessary.
+
+
+SECTION 16: COMPLETE SYSTEM ARCHITECTURE
+
+The intended complete architecture is:
+
+User question
+-> RAG retrieval
+-> retrieve top relevant project and GIS knowledge
+-> Gemma 4 reasoning
+-> determine whether live GIS interaction is required
+-> select MCP tool or sequence of MCP tools
+-> execute operation in QGIS
+-> receive QGIS result
+-> Gemma 4 generates final response.
+
+The roles can be summarized as:
+
+RAG = knowledge retrieval.
+
+Gemma 4 = language understanding, reasoning, tool selection, and response generation.
+
+MCP = communication and tool interface between the language model and QGIS.
+
+QGIS = live GIS data management, spatial analysis, visualization, and execution environment.lamaMCP Project Knowledge
+
+The project connects a user to QGIS through a locally running language model and MCP.
+
+The main pipeline is:
+User -> Ollama/Gemma 4 -> MCP Server -> QGIS.
+
+MCP is responsible for live interaction with QGIS.
+
+The get_layers tool retrieves information about layers currently available in QGIS.
+
+The zoom_to_layer tool changes the QGIS map view so that the selected layer is visible.
+
+The set_layer_color tool changes the display colour of a selected QGIS layer.
+
+RAG is responsible for retrieving relevant project-specific knowledge before the language model produces its response.
+
+RAG does not replace MCP. RAG provides knowledge and context, while MCP performs live QGIS operations.
+
+The intended complete architecture is:
+User question -> RAG retrieval -> Gemma 4 reasoning -> MCP tool selection -> QGIS execution -> final response.
+SECTION 17: PROJECT-SPECIFIC DATASET KNOWLEDGE
+
+The current QGIS project contains multiple thematic GIS layers representing different types of geographic information.
+
+Important layers observed in the project include:
+- hospitals
+- schools
+- university
+- buildings
+- highways_Karlsruhe
+- railways_karlsruhe
+- Waterways
+- residential
+- commercial
+- industrial
+- farmland
+
+The hospitals layer represents hospital-related geographic features in the study area.
+
+The schools layer represents school-related geographic features.
+
+The university layer represents university-related geographic features.
+
+The buildings layer represents building features.
+
+The highways_Karlsruhe layer represents road or highway features.
+
+The railways_karlsruhe layer represents railway features.
+
+The Waterways layer represents waterway features.
+
+The residential layer represents residential land-use areas.
+
+The commercial layer represents commercial land-use areas.
+
+The industrial layer represents industrial land-use areas.
+
+The farmland layer represents farmland-related areas.
+
+The exact current layer IDs, feature counts, visibility state, and other live properties should be obtained from QGIS through MCP because these values can change between sessions.
+
+The geometry type of a layer affects which GIS operations are appropriate.
+
+Point data is suitable for representing discrete locations.
+
+Line data is suitable for representing linear geographic features.
+
+Polygon data is suitable for representing areas and boundaries.
+
+Dataset descriptions stored in RAG provide semantic understanding of what each layer represents.
+
+Live dataset properties should be verified through MCP before executing an operation.
+
+
+SECTION 18: DATASET RELATIONSHIPS
+
+Spatial analysis frequently requires combining multiple datasets.
+
+Hospitals and residential areas can be combined to study healthcare accessibility and proximity.
+
+Hospitals and highways can be combined to examine transport access to healthcare facilities.
+
+Schools and residential areas can be combined to examine accessibility of educational facilities.
+
+Universities and highways can be combined to study transport connectivity.
+
+Buildings and land-use layers can be combined to examine the relationship between structures and surrounding land use.
+
+Waterways and buildings can be combined to investigate buildings located near water features.
+
+Railways and residential areas can be combined to study transport connectivity or potential proximity relationships.
+
+Commercial and residential areas can be compared to study mixed land-use patterns.
+
+Industrial areas and residential areas can be compared to identify spatial proximity between residential and industrial land uses.
+
+The appropriate analysis depends on the user request, geometry types, coordinate reference systems, and available QGIS processing tools.
+
+
+SECTION 19: REALISTIC GIS WORKFLOWS
+
+WORKFLOW: HOSPITAL PROXIMITY ANALYSIS
+
+Example user request:
+
+"Find residential areas within 500 metres of hospitals."
+
+Possible reasoning steps:
+
+1. Identify the hospitals layer.
+2. Identify the residential layer.
+3. Check whether the coordinate reference system is appropriate for distance calculations.
+4. Create a 500-metre buffer around hospital features.
+5. Compare the hospital buffer with residential polygons.
+6. Identify residential features that intersect the buffer.
+7. Return or display the result.
+
+RAG provides knowledge about buffering, proximity analysis, and spatial relationships.
+
+MCP is responsible for retrieving current layer information and executing supported QGIS operations.
+
+
+WORKFLOW: SCHOOL ACCESSIBILITY ANALYSIS
+
+Example user request:
+
+"Which residential areas are close to schools?"
+
+Possible reasoning steps:
+
+1. Identify the schools layer.
+2. Identify the residential layer.
+3. Determine an appropriate proximity distance if the user specifies one.
+4. Create a buffer around school features if required.
+5. Identify residential features that intersect the school buffer.
+6. Return the resulting features or layer.
+
+If the user does not specify a distance, the system should ask for clarification rather than inventing one.
+
+
+WORKFLOW: UNIVERSITY AND TRANSPORT ANALYSIS
+
+Example user request:
+
+"Show universities near major roads."
+
+Possible reasoning steps:
+
+1. Identify the university layer.
+2. Identify the highways_Karlsruhe layer.
+3. Determine whether a distance threshold is specified.
+4. If a threshold is given, perform proximity or buffer analysis.
+5. Identify university features located within the specified distance of road features.
+6. Return or display the result.
+
+
+WORKFLOW: BUILDINGS NEAR WATERWAYS
+
+Example user request:
+
+"Find buildings near waterways."
+
+Possible reasoning steps:
+
+1. Identify the buildings layer.
+2. Identify the Waterways layer.
+3. Determine the required distance threshold.
+4. Check the coordinate reference system.
+5. Create a buffer around waterways if necessary.
+6. Identify building features intersecting the buffer.
+7. Return or display the selected buildings.
+
+
+WORKFLOW: LAND-USE COMPARISON
+
+Example user request:
+
+"Compare residential and commercial areas."
+
+Possible reasoning steps:
+
+1. Identify the residential layer.
+2. Identify the commercial layer.
+3. Determine what type of comparison is required.
+4. The comparison may involve feature counts, spatial overlap, area, proximity, or map visualization.
+5. Use the appropriate QGIS tools based on the requested comparison.
+
+If the user request is ambiguous, the system should ask what type of comparison is required.
+
+
+SECTION 20: TOOL-TO-TASK MAPPING
+
+Different user requests require different MCP tools.
+
+TASK: Check whether QGIS is connected
+
+Preferred tool:
+ping
+
+
+TASK: Get information about the QGIS environment
+
+Preferred tool:
+get_qgis_info
+
+
+TASK: Get information about the current project
+
+Preferred tool:
+get_project_info
+
+
+TASK: List currently loaded layers
+
+Preferred tool:
+get_layers
+
+
+TASK: Determine the current feature count of a vector layer
+
+Preferred workflow:
+
+1. Call get_layers.
+2. Identify the requested layer.
+3. Read the current feature_count value.
+
+
+TASK: Zoom to a named layer
+
+Preferred workflow:
+
+1. Call get_layers.
+2. Match the user-provided layer name.
+3. Extract the current layer ID.
+4. Call zoom_to_layer using that layer ID.
+
+
+TASK: Change the colour of a named vector layer
+
+Preferred workflow:
+
+1. Call get_layers.
+2. Match the layer name.
+3. Extract the current layer ID.
+4. Call set_layer_color using the layer ID and requested colour.
+
+
+TASK: Inspect features from a vector layer
+
+Preferred workflow:
+
+1. Call get_layers if the layer ID is not already known.
+2. Identify the requested layer ID.
+3. Call get_layer_features.
+4. Use a reasonable feature limit.
+
+
+TASK: Add a vector dataset
+
+Preferred tool:
+add_vector_layer
+
+
+TASK: Add a raster dataset
+
+Preferred tool:
+add_raster_layer
+
+
+TASK: Remove a layer
+
+Preferred workflow:
+
+1. Call get_layers.
+2. Identify the requested layer.
+3. Extract the layer ID.
+4. Call remove_layer.
+
+
+TASK: Save the current project
+
+Preferred tool:
+save_project
+
+
+TASK: Render the map
+
+Preferred tool:
+render_map
+
+
+TASK: Execute a QGIS processing algorithm
+
+Preferred tool:
+execute_processing
+
+Before using execute_processing, the system should identify the required QGIS processing algorithm and the parameters needed for that algorithm.
+
+
+SECTION 21: DECIDING BETWEEN RAG AND MCP
+
+The system should decide whether a request requires stored knowledge, live QGIS information, or both.
+
+Knowledge questions can often be answered using RAG alone.
+
+Examples:
+- What is a buffer?
+- What is a coordinate reference system?
+- What is the difference between vector and raster data?
+- What type of analysis can be performed with hospitals and residential areas?
+
+Live project questions require MCP.
+
+Examples:
+- Which layers are currently loaded?
+- How many hospital features are currently loaded?
+- Is the residential layer visible?
+- What is the current QGIS project information?
+
+Action requests require MCP execution.
+
+Examples:
+- Zoom to the hospitals layer.
+- Change the university layer to red.
+- Remove the schools layer.
+- Save the project.
+
+Some requests require both RAG and MCP.
+
+Example:
+
+"Find residential areas within 500 metres of hospitals."
+
+RAG can provide knowledge about buffer and intersection analysis.
+
+MCP can retrieve the current layers and execute supported QGIS processing operations.
+
+The language model should combine both sources when necessary.
+
+
+SECTION 22: SAFETY AND EXECUTION RULES
+
+The system should not invent layer IDs.
+
+The system should retrieve current layer information before using tools that require a layer ID.
+
+The system should not claim that an operation succeeded unless the MCP result confirms success.
+
+The system should not invent feature counts.
+
+Current feature counts should be retrieved from QGIS.
+
+The system should not assume a coordinate reference system is suitable for metre-based distance calculations unless it has been verified.
+
+The system should not invent missing processing parameters.
+
+If a user request is ambiguous and an important parameter is missing, clarification should be requested.
+
+Examples of important missing parameters include:
+- buffer distance
+- output path
+- target layer
+- processing method
+- measurement unit
+
+RAG provides supporting knowledge, but live QGIS state should be verified through MCP.
