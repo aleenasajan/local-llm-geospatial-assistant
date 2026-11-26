@@ -495,12 +495,21 @@ async def chat_loop():
                     model=OLLAMA_MODEL,
                     messages=messages,
                     tools=tools,
+                    think=False,
+                    options={"num_ctx": 8192, "num_predict": 512},
                     stream=False,
                 )
 
+                print("OLLAMA STOP REASON:", response.done_reason)
+                print("OLLAMA OUTPUT TOKENS:", response.eval_count)
                 assistant_message = (
                     response["message"]
                 )
+
+                print("\nDEBUG — Gemma response:")
+                print("Content:", repr(assistant_message.get("content")))
+                print("Tool calls:", assistant_message.get("tool_calls"))
+                print("Thinking:", repr(assistant_message.get("thinking")))
 
                 messages.append(
                     assistant_message
